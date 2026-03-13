@@ -4,13 +4,13 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-type Post = { id: string; platform: string; content: string; status: string; created_at: string }
+type Post     = { id: string; platform: string; content: string; status: string; created_at: string }
 type Business = { id: string; name: string; description: string; audience: string; niche: string; tone: string }
 
-const P_ICON: Record<string,string>  = { twitter:'𝕏', linkedin:'in', instagram:'📸' }
+const P_ICON:  Record<string,string> = { twitter:'𝕏', linkedin:'in', instagram:'📸' }
 const P_COLOR: Record<string,string> = { twitter:'rgba(29,161,242,0.15)', linkedin:'rgba(10,102,194,0.15)', instagram:'rgba(225,48,108,0.15)' }
 const P_LABEL: Record<string,string> = { twitter:'Twitter/X', linkedin:'LinkedIn', instagram:'Instagram' }
-const P_MAX: Record<string,number>   = { twitter:280, linkedin:3000, instagram:2200 }
+const P_MAX:   Record<string,number> = { twitter:280, linkedin:3000, instagram:2200 }
 
 const HASHTAGS: Record<string,string[]> = {
   twitter:   ['#AI','#SmallBusiness','#Entrepreneur','#GrowthHacking','#StartupLife'],
@@ -31,8 +31,9 @@ export default function DashboardClient() {
   const [copied, setCopied]         = useState<string|null>(null)
   const [expanding, setExpanding]   = useState<string|null>(null)
   const [posting, setPosting]       = useState<string|null>(null)
-  const [posted, setPosted]         = useState<string|null>(null)
+  const [posted, setPosted]         = useState<Record<string,boolean>>({})
   const [connectedSocials, setConnectedSocials] = useState<string[]>([])
+  const [postError, setPostError]   = useState<string|null>(null)
   const supabase = createClient()
   const router   = useRouter()
   const params   = useSearchParams()
@@ -42,22 +43,19 @@ export default function DashboardClient() {
       if (!user) { router.push('/login'); return }
       setUser(user)
       if (params.get('upgraded') === 'true') setUpgraded(true)
-      const [{ data: profile }, { data: biz }, { data: postsData }] = await Promise.all([
+
+      const [{ data: profile }, { data: biz }, { data: postsData }, { data: socialData }] = await Promise.all([
         supabase.from('postpilot_profiles').select('plan').eq('id', user.id).single(),
         supabase.from('postpilot_businesses').select('*').eq('user_id', user.id).single(),
         supabase.from('postpilot_posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(60),
-        supabase.from('postpilot_posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1), // dummy to keep array length
+        supabase.from('postpilot_social_accounts').select('platform').eq('user_id', user.id),
       ])
-      if (profile) setPlan(profile.plan)
-      if (biz) setBusiness(biz)
-      else { router.push('/dashboard/onboarding'); return }
-      if (postsData) setPosts(postsData)
-      // Check Ayrshare connected platforms
-      try {
-        const sr = await fetch('/api/social/ayrshare/status')
-        const sd = await sr.json()
-        if (sd.platforms?.length) setConnectedSocials(sd.platforms.map((p: string) => p.toLowerCase()))
-      } catch { /* non-critical */ }
+
+      if (profile)    setPlan(profile.plan)
+      if (biz)        setBusiness(biz)
+      else            { router.push('/dashboard/onboarding'); return }
+      if (postsData)  setPosts(postsData)
+      if (socialData) setConnectedSocials(socialData.map((s: { platform: string }) => s.platform))
       setLoading(false)
     })
   }, [])
@@ -72,7 +70,6 @@ export default function DashboardClient() {
     if (!business || !user) return
     setGenerating(true)
     const countBefore = posts.length
-    // Start polling DB every 2s — posts save server-side even if fetch times out
     const pollInterval = setInterval(async () => {
       const count = await refreshPosts(user.id)
       if (count > countBefore) { clearInterval(pollInterval); setGenerating(false) }
@@ -80,14 +77,8 @@ export default function DashboardClient() {
     try {
       const res  = await fetch('/api/generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ business }) })
       const data = await res.json()
-      if (data.posts || data.error) {
-        clearInterval(pollInterval)
-        await refreshPosts(user.id)
-      }
-    } catch {
-      // fetch timed out — polling will catch the posts when they appear
-    } finally {
-      // Stop polling after 30s max
+      if (data.posts || data.error) { clearInterval(pollInterval); await refreshPosts(user.id) }
+    } catch { /* polling handles it */ } finally {
       setTimeout(() => { clearInterval(pollInterval); setGenerating(false) }, 30000)
     }
   }
@@ -99,13 +90,12 @@ export default function DashboardClient() {
 
   const copyPost = (id: string, content: string) => {
     navigator.clipboard?.writeText(content)
-    setCopied(id)
-    setTimeout(() => setCopied(null), 2000)
+    setCopied(id); setTimeout(() => setCopied(null), 2000)
   }
 
   const postToSocial = async (postId: string, platform: string, content: string) => {
     const key = `${postId}-${platform}`
-    setPosting(key)
+    setPosting(key); setPostError(null)
     try {
       if (platform === 'instagram') {
         navigator.clipboard?.writeText(content)
@@ -114,32 +104,35 @@ export default function DashboardClient() {
       }
       const res  = await fetch('/api/social/post', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId, platform }) })
       const data = await res.json()
-      if (data.ok) { setPosted(key); setPosts(p => p.map(x => x.id === postId ? { ...x, status:'posted' } : x)); setTimeout(() => setPosted(null), 3000) }
-      else alert(`Error: ${data.error}`)
+      if (data.ok) {
+        setPosted(p => ({ ...p, [key]: true }))
+        setPosts(p => p.map(x => x.id === postId ? { ...x, status:'posted' } : x))
+        setTimeout(() => setPosted(p => { const n = { ...p }; delete n[key]; return n }), 4000)
+      } else {
+        setPostError(data.error || 'Posting failed')
+        setTimeout(() => setPostError(null), 5000)
+      }
     } finally { setPosting(null) }
   }
 
-  const logout = async () => { await supabase.auth.signOut(); router.push('/') }
-
   const addHashtags = async (id: string, platform: string, content: string) => {
-    const tags = HASHTAGS[platform] ?? HASHTAGS.twitter
+    const tags       = HASHTAGS[platform] ?? HASHTAGS.twitter
     const newContent = content + '\n\n' + tags.join(' ')
     await supabase.from('postpilot_posts').update({ content: newContent }).eq('id', id)
     setPosts(p => p.map(x => x.id === id ? { ...x, content: newContent } : x))
   }
 
   const handleUpgrade = async () => {
-    const res   = await fetch('/api/stripe/checkout', { method:'POST' })
+    const res = await fetch('/api/stripe/checkout', { method:'POST' })
     const { url } = await res.json()
     if (url) window.location.href = url
   }
 
-  const filtered  = filter === 'all' ? posts : posts.filter(p => p.status === filter)
-  const pending   = posts.filter(p => p.status === 'pending').length
-  const approved  = posts.filter(p => p.status === 'approved').length
-  const thisWeek  = posts.filter(p => new Date(p.created_at) > new Date(Date.now() - 7*24*60*60*1000)).length
+  const filtered = filter === 'all' ? posts : posts.filter(p => p.status === filter)
+  const pending  = posts.filter(p => p.status === 'pending').length
+  const approved = posts.filter(p => p.status === 'approved').length
+  const thisWeek = posts.filter(p => new Date(p.created_at) > new Date(Date.now() - 7*24*60*60*1000)).length
 
-  // ── Calendar grouping by day ───────────────────────────────────────────────
   const calendarPosts: Record<string,Post[]> = {}
   posts.filter(p => p.status !== 'rejected').forEach(p => {
     const day = new Date(p.created_at).toLocaleDateString('en-GB',{ weekday:'short', day:'numeric', month:'short' })
@@ -147,10 +140,22 @@ export default function DashboardClient() {
     calendarPosts[day].push(p)
   })
 
-  if (loading) return <div style={{ background:'#050510', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.3)', fontFamily:'sans-serif' }}>Loading PostPilot...</div>
+  if (loading) return (
+    <div style={{ background:'#050510', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.3)', fontFamily:'sans-serif' }}>
+      Loading PostPilot...
+    </div>
+  )
 
   return (
     <div style={{ fontFamily:'-apple-system,BlinkMacSystemFont,"Inter",sans-serif', background:'#050510', color:'#fff', minHeight:'100vh' }}>
+
+      {/* Error toast */}
+      {postError && (
+        <div style={{ position:'fixed', top:'20px', right:'20px', zIndex:999, background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.3)', color:'#f87171', padding:'12px 20px', borderRadius:'10px', fontSize:'13px', fontWeight:600, boxShadow:'0 8px 32px rgba(0,0,0,0.4)' }}>
+          ❌ {postError}
+        </div>
+      )}
+
       {/* NAV */}
       <nav style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 32px', borderBottom:'1px solid rgba(255,255,255,0.05)', background:'rgba(5,5,16,0.95)', backdropFilter:'blur(20px)', position:'sticky', top:0, zIndex:100 }}>
         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
@@ -164,15 +169,28 @@ export default function DashboardClient() {
           }
           <span style={{ fontSize:'12px', color:'rgba(255,255,255,0.3)' }}>{user?.email}</span>
           <Link href="/dashboard/settings" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.35)', padding:'5px 12px', borderRadius:'6px', fontSize:'11px', textDecoration:'none' }}>⚙️ Settings</Link>
-          <button onClick={logout} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.3)', padding:'5px 12px', borderRadius:'6px', fontSize:'11px', cursor:'pointer' }}>Sign out</button>
+          <button onClick={() => { supabase.auth.signOut(); router.push('/') }} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.3)', padding:'5px 12px', borderRadius:'6px', fontSize:'11px', cursor:'pointer' }}>Sign out</button>
         </div>
       </nav>
 
       <div style={{ maxWidth:'980px', margin:'0 auto', padding:'32px 28px' }}>
         {upgraded && (
-          <div style={{ background:'rgba(124,58,237,0.08)', border:'1px solid rgba(124,58,237,0.2)', borderRadius:'12px', padding:'14px 18px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'10px' }}>
+          <div style={{ background:'rgba(124,58,237,0.08)', border:'1px solid rgba(124,58,237,0.2)', borderRadius:'12px', padding:'14px 18px', marginBottom:'20px', display:'flex', gap:'10px' }}>
             <span style={{ fontSize:'18px' }}>🎉</span>
             <p style={{ margin:0, fontSize:'13px', color:'#a78bfa', fontWeight:500 }}>Welcome to Pro! Unlimited generation active.</p>
+          </div>
+        )}
+
+        {/* Connect accounts CTA (if none connected) */}
+        {connectedSocials.length === 0 && (
+          <div style={{ background:'rgba(124,58,237,0.06)', border:'1px solid rgba(124,58,237,0.15)', borderRadius:'12px', padding:'14px 20px', marginBottom:'20px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
+            <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
+              <span style={{ fontSize:'18px' }}>🔗</span>
+              <p style={{ margin:0, fontSize:'13px', color:'rgba(255,255,255,0.6)' }}>Connect LinkedIn, Twitter, or Instagram to post directly from here.</p>
+            </div>
+            <Link href="/dashboard/settings" style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', padding:'8px 18px', borderRadius:'8px', fontSize:'12px', fontWeight:700, textDecoration:'none', flexShrink:0 }}>
+              Connect accounts →
+            </Link>
           </div>
         )}
 
@@ -180,7 +198,10 @@ export default function DashboardClient() {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px', flexWrap:'wrap', gap:'12px' }}>
           <div>
             <h1 style={{ fontSize:'22px', fontWeight:800, letterSpacing:'-0.5px', margin:'0 0 4px' }}>Content Dashboard</h1>
-            <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'13px', margin:0 }}>{business?.name} · {plan === 'pro' ? 'Pro Plan' : 'Free Plan'}</p>
+            <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'13px', margin:0 }}>
+              {business?.name} · {plan === 'pro' ? 'Pro Plan' : 'Free Plan'}
+              {connectedSocials.length > 0 && <span style={{ color:'#86efac', marginLeft:'8px' }}>· {connectedSocials.map(p => P_LABEL[p] || p).join(', ')} connected</span>}
+            </p>
           </div>
           <div style={{ display:'flex', gap:'8px' }}>
             <button onClick={() => setView(v => v === 'list' ? 'calendar' : 'list')}
@@ -188,7 +209,7 @@ export default function DashboardClient() {
               {view === 'list' ? '📅 Calendar' : '📋 List'}
             </button>
             <button onClick={generate} disabled={generating}
-              style={{ background:generating ? 'rgba(255,255,255,0.04)' : 'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'9px 20px', borderRadius:'9px', fontWeight:700, fontSize:'13px', cursor:generating ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:'6px' }}>
+              style={{ background:generating ? 'rgba(255,255,255,0.04)' : 'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'9px 20px', borderRadius:'9px', fontWeight:700, fontSize:'13px', cursor:generating ? 'not-allowed' : 'pointer' }}>
               {generating ? '✨ Generating...' : '✨ Generate posts'}
             </button>
           </div>
@@ -197,10 +218,10 @@ export default function DashboardClient() {
         {/* Stats */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px', marginBottom:'24px' }}>
           {[
-            { label:'Total posts', value:posts.length, highlight:false },
-            { label:'Awaiting review', value:pending, highlight:pending > 0 },
-            { label:'Approved', value:approved, highlight:false },
-            { label:'This week', value:thisWeek, highlight:false },
+            { label:'Total posts',     value:posts.length,  highlight:false },
+            { label:'Awaiting review', value:pending,       highlight:pending > 0 },
+            { label:'Approved',        value:approved,      highlight:false },
+            { label:'This week',       value:thisWeek,      highlight:false },
           ].map(s => (
             <div key={s.label} style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${s.highlight ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.05)'}`, borderRadius:'12px', padding:'16px' }}>
               <p style={{ fontSize:'10px', color:'rgba(255,255,255,0.3)', margin:'0 0 6px', textTransform:'uppercase', letterSpacing:'0.5px' }}>{s.label}</p>
@@ -209,12 +230,12 @@ export default function DashboardClient() {
           ))}
         </div>
 
-        {/* ── CALENDAR VIEW ────────────────────────────────────────────────── */}
+        {/* CALENDAR VIEW */}
         {view === 'calendar' && (
           <div>
             <p style={{ fontSize:'13px', color:'rgba(255,255,255,0.35)', marginBottom:'16px' }}>Posts grouped by date — approved and pending</p>
             {Object.entries(calendarPosts).length === 0
-              ? <div style={{ textAlign:'center', padding:'60px', color:'rgba(255,255,255,0.2)' }}><p style={{ fontSize:'40px', marginBottom:'12px' }}>📅</p><p>No posts yet. Generate your first batch.</p></div>
+              ? <div style={{ textAlign:'center', padding:'60px', color:'rgba(255,255,255,0.2)' }}><p style={{ fontSize:'40px', marginBottom:'12px' }}>📅</p><p>No posts yet. Hit Generate.</p></div>
               : Object.entries(calendarPosts).map(([day, dayPosts]) => (
                 <div key={day} style={{ marginBottom:'20px' }}>
                   <p style={{ fontSize:'12px', color:'rgba(255,255,255,0.4)', fontWeight:700, letterSpacing:'0.5px', marginBottom:'8px', textTransform:'uppercase' }}>{day}</p>
@@ -241,12 +262,11 @@ export default function DashboardClient() {
           </div>
         )}
 
-        {/* ── LIST VIEW ────────────────────────────────────────────────────── */}
+        {/* LIST VIEW */}
         {view === 'list' && (
           <>
-            {/* Filter tabs */}
             <div style={{ display:'flex', gap:'6px', marginBottom:'16px' }}>
-              {['all','pending','approved','rejected'].map(f => (
+              {['all','pending','approved','rejected','posted'].map(f => (
                 <button key={f} onClick={() => setFilter(f)}
                   style={{ background:filter === f ? 'rgba(124,58,237,0.15)' : 'transparent', border:`1px solid ${filter === f ? 'rgba(124,58,237,0.35)' : 'rgba(255,255,255,0.06)'}`, color:filter === f ? '#a78bfa' : 'rgba(255,255,255,0.35)', padding:'6px 14px', borderRadius:'8px', fontSize:'12px', fontWeight:filter === f ? 600 : 400, cursor:'pointer', textTransform:'capitalize' }}>
                   {f}
@@ -267,8 +287,9 @@ export default function DashboardClient() {
                   const charCount  = post.content.length
                   const maxChars   = P_MAX[post.platform] || 3000
                   const charPct    = Math.min(100, (charCount / maxChars) * 100)
+                  const isConnected = connectedSocials.includes(post.platform)
                   return (
-                    <div key={post.id} style={{ background:post.status === 'approved' ? 'rgba(124,58,237,0.04)' : 'rgba(255,255,255,0.02)', border:`1px solid ${post.status === 'approved' ? 'rgba(124,58,237,0.15)' : post.status === 'rejected' ? 'rgba(248,113,113,0.1)' : 'rgba(255,255,255,0.06)'}`, borderRadius:'14px', padding:'16px 18px' }}>
+                    <div key={post.id} style={{ background:post.status === 'approved' ? 'rgba(124,58,237,0.04)' : post.status === 'posted' ? 'rgba(34,197,94,0.03)' : 'rgba(255,255,255,0.02)', border:`1px solid ${post.status === 'approved' ? 'rgba(124,58,237,0.15)' : post.status === 'posted' ? 'rgba(34,197,94,0.15)' : post.status === 'rejected' ? 'rgba(248,113,113,0.1)' : 'rgba(255,255,255,0.06)'}`, borderRadius:'14px', padding:'16px 18px' }}>
                       <div style={{ display:'flex', alignItems:'flex-start', gap:'12px' }}>
                         {/* Platform badge */}
                         <div style={{ background:P_COLOR[post.platform] || 'rgba(255,255,255,0.07)', borderRadius:'8px', padding:'7px 10px', fontSize:'12px', fontWeight:700, flexShrink:0, minWidth:'68px', textAlign:'center' }}>
@@ -277,7 +298,6 @@ export default function DashboardClient() {
                         </div>
 
                         <div style={{ flex:1, minWidth:0 }}>
-                          {/* Content */}
                           <p style={{ fontSize:'13px', color:post.status === 'rejected' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.75)', lineHeight:1.65, margin:'0 0 10px', textDecoration:post.status === 'rejected' ? 'line-through' : 'none', display:isExpanded ? 'block' : '-webkit-box', WebkitLineClamp:isExpanded ? undefined : 3, WebkitBoxOrient:'vertical', overflow:isExpanded ? 'visible' : 'hidden' } as React.CSSProperties}>
                             {post.content}
                           </p>
@@ -291,48 +311,56 @@ export default function DashboardClient() {
                           </div>
 
                           {/* Actions */}
-                          <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
-                            {post.status === 'pending' && <>
-                              <button onClick={() => updateStatus(post.id,'approved')} style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'6px 14px', borderRadius:'7px', fontSize:'12px', fontWeight:700, cursor:'pointer' }}>✓ Approve</button>
-                              <button onClick={() => updateStatus(post.id,'rejected')} style={{ background:'rgba(239,68,68,0.08)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.15)', padding:'6px 12px', borderRadius:'7px', fontSize:'12px', cursor:'pointer' }}>✗ Reject</button>
-                            </>}
+                          <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', alignItems:'center' }}>
+                            {/* Status actions */}
+                            {post.status === 'pending' && (
+                              <>
+                                <button onClick={() => updateStatus(post.id,'approved')} style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'6px 14px', borderRadius:'7px', fontSize:'12px', fontWeight:700, cursor:'pointer' }}>✓ Approve</button>
+                                <button onClick={() => updateStatus(post.id,'rejected')} style={{ background:'rgba(239,68,68,0.08)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.15)', padding:'6px 12px', borderRadius:'7px', fontSize:'12px', cursor:'pointer' }}>✗ Reject</button>
+                              </>
+                            )}
+                            {post.status === 'rejected' && (
+                              <button onClick={() => updateStatus(post.id,'pending')} style={{ background:'transparent', color:'rgba(255,255,255,0.3)', border:'1px solid rgba(255,255,255,0.08)', padding:'6px 12px', borderRadius:'7px', fontSize:'12px', cursor:'pointer' }}>↩ Restore</button>
+                            )}
+                            {post.status === 'posted' && (
+                              <span style={{ fontSize:'11px', color:'#22c55e', fontWeight:700 }}>✓ Live on {P_LABEL[post.platform] || post.platform}</span>
+                            )}
+
+                            {/* Post Now */}
                             {post.status === 'approved' && (
                               <>
-                                <span style={{ fontSize:'11px', color:'#a78bfa', fontWeight:600, alignSelf:'center' }}>✓ Approved</span>
-                                {/* Post Now buttons for connected platforms */}
-                                {connectedSocials.includes(post.platform) && (
-                                  <button onClick={() => postToSocial(post.id, post.platform, post.content)}
-                                    disabled={posting === `${post.id}-${post.platform}`}
-                                    style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'6px 14px', borderRadius:'7px', fontSize:'12px', fontWeight:700, cursor:'pointer' }}>
-                                    {posting === `${post.id}-${post.platform}` ? '⏳ Posting...' : posted === `${post.id}-${post.platform}` ? '✓ Posted!' : `🚀 Post to ${P_LABEL[post.platform]}`}
-                                  </button>
-                                )}
-                                {post.platform === 'instagram' && (
+                                <span style={{ fontSize:'11px', color:'#a78bfa', fontWeight:600 }}>✓ Approved</span>
+                                {post.platform === 'instagram' ? (
                                   <button onClick={() => postToSocial(post.id, 'instagram', post.content)}
                                     style={{ background:'rgba(225,48,108,0.1)', border:'1px solid rgba(225,48,108,0.2)', color:'#f9a8d4', padding:'6px 12px', borderRadius:'7px', fontSize:'12px', cursor:'pointer' }}>
                                     📸 Copy &amp; Open Instagram
                                   </button>
-                                )}
-                                {!connectedSocials.includes(post.platform) && post.platform !== 'instagram' && (
-                                  <Link href="/dashboard/settings" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.35)', padding:'6px 12px', borderRadius:'7px', fontSize:'11px', textDecoration:'none' }}>
+                                ) : isConnected ? (
+                                  <button onClick={() => postToSocial(post.id, post.platform, post.content)}
+                                    disabled={posting === `${post.id}-${post.platform}`}
+                                    style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'6px 14px', borderRadius:'7px', fontSize:'12px', fontWeight:700, cursor:'pointer', opacity:posting === `${post.id}-${post.platform}` ? 0.7 : 1 }}>
+                                    {posting === `${post.id}-${post.platform}` ? '⏳ Posting...' : posted[`${post.id}-${post.platform}`] ? '✅ Posted!' : `🚀 Post to ${P_LABEL[post.platform]}`}
+                                  </button>
+                                ) : (
+                                  <Link href="/dashboard/settings" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.35)', padding:'6px 12px', borderRadius:'7px', fontSize:'11px', textDecoration:'none' }}>
                                     Connect {P_LABEL[post.platform]} →
                                   </Link>
                                 )}
                               </>
                             )}
-                            {post.status === 'rejected' && <button onClick={() => updateStatus(post.id,'pending')} style={{ background:'transparent', color:'rgba(255,255,255,0.3)', border:'1px solid rgba(255,255,255,0.08)', padding:'6px 12px', borderRadius:'7px', fontSize:'12px', cursor:'pointer' }}>Restore</button>}
 
+                            {/* Always available */}
                             <button onClick={() => copyPost(post.id, post.content)}
                               style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', color:copied === post.id ? '#22c55e' : 'rgba(255,255,255,0.4)', padding:'6px 12px', borderRadius:'7px', fontSize:'12px', cursor:'pointer' }}>
                               {copied === post.id ? '✓ Copied' : '📋 Copy'}
                             </button>
                             <button onClick={() => addHashtags(post.id, post.platform, post.content)}
                               style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.4)', padding:'6px 12px', borderRadius:'7px', fontSize:'12px', cursor:'pointer' }}>
-                              #️⃣ Add hashtags
+                              # Hashtags
                             </button>
                             <button onClick={() => setExpanding(expanding === post.id ? null : post.id)}
                               style={{ background:'transparent', border:'none', color:'rgba(255,255,255,0.3)', padding:'6px 8px', fontSize:'11px', cursor:'pointer' }}>
-                              {isExpanded ? '▲ Less' : '▼ More'}
+                              {isExpanded ? '▲' : '▼'}
                             </button>
                           </div>
                         </div>
@@ -345,16 +373,16 @@ export default function DashboardClient() {
           </>
         )}
 
-        {/* Platform tips footer */}
+        {/* Platform tips */}
         <div style={{ marginTop:'32px', display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px' }}>
           {[
-            { icon:'𝕏', platform:'Twitter/X', tip:'Best time: 8am & 6pm. Hooks in first line. No hashtag spam.' },
-            { icon:'in', platform:'LinkedIn', tip:'Long-form gets 3× reach. Ask questions. Post Tue-Thu.' },
-            { icon:'📸', platform:'Instagram', tip:'Line breaks matter. 5-10 hashtags. Stories drive profile visits.' },
+            { icon:'𝕏', platform:'Twitter/X', tip:'Hooks in first line. Under 280 chars. Post 8am & 6pm UK.' },
+            { icon:'in', platform:'LinkedIn', tip:'Long-form gets 3× reach. Ask questions. Tue-Thu best days.' },
+            { icon:'📸', platform:'Instagram', tip:'5-10 hashtags. Line breaks matter. Stories drive profile visits.' },
           ].map(t => (
             <div key={t.platform} style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:'12px', padding:'14px' }}>
               <p style={{ fontSize:'12px', fontWeight:700, marginBottom:'4px' }}>{t.icon} {t.platform}</p>
-              <p style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', lineHeight:1.5 }}>{t.tip}</p>
+              <p style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', lineHeight:1.5, margin:0 }}>{t.tip}</p>
             </div>
           ))}
         </div>

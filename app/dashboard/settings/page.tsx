@@ -52,9 +52,12 @@ function SettingsPage() {
       const connected = params.get('connected')
       const error     = params.get('error')
       if (connected === 'linkedin') showToast('✅ LinkedIn connected! You can now post directly.')
+      if (connected === 'twitter')  showToast('✅ Twitter/X connected! You can now post tweets.')
       if (error === 'linkedin_denied')         showToast('❌ LinkedIn connection cancelled.')
       if (error === 'linkedin_not_configured') showToast('❌ LinkedIn keys not configured yet.')
       if (error === 'linkedin_token_failed')   showToast('❌ LinkedIn auth failed. Try again.')
+      if (error === 'twitter_denied')          showToast('❌ Twitter connection cancelled.')
+      if (error === 'twitter_token')           showToast('❌ Twitter auth failed. Try again.')
     })
   }, [])
 
@@ -96,18 +99,21 @@ function SettingsPage() {
       color: 'rgba(10,102,194,0.15)', border: 'rgba(10,102,194,0.3)',
       connectUrl: '/api/social/linkedin/connect',
       desc: 'Share posts to your LinkedIn profile',
+      live: true,
     },
     {
       id: 'twitter', label: 'Twitter / X', icon: '𝕏',
       color: 'rgba(29,161,242,0.1)', border: 'rgba(29,161,242,0.2)',
-      connectUrl: null,
-      desc: 'Coming soon',
+      connectUrl: '/api/social/twitter/connect',
+      desc: 'Post tweets directly from PostPilot',
+      live: false,
     },
     {
       id: 'instagram', label: 'Instagram', icon: '📸',
       color: 'rgba(225,48,108,0.08)', border: 'rgba(225,48,108,0.15)',
-      connectUrl: null,
-      desc: 'Copy & open Instagram',
+      connectUrl: '/api/social/instagram/connect',
+      desc: 'Post to Instagram from PostPilot',
+      live: false,
     },
   ]
 
@@ -168,14 +174,14 @@ function SettingsPage() {
                       style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', color:'#f87171', padding:'7px 16px', borderRadius:'8px', fontSize:'12px', fontWeight:600, cursor:'pointer' }}>
                       {disconnecting === p.id ? 'Disconnecting...' : 'Disconnect'}
                     </button>
-                  ) : p.connectUrl ? (
+                  ) : p.live ? (
                     <a href={p.connectUrl} style={{ display:'inline-block', background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', padding:'8px 18px', borderRadius:'8px', fontSize:'12px', fontWeight:700, textDecoration:'none' }}>
                       Connect →
                     </a>
                   ) : (
-                    <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', padding:'7px 14px', borderRadius:'8px', display:'inline-block' }}>
-                      Coming soon
-                    </span>
+                    <a href={p.connectUrl} style={{ display:'inline-block', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.5)', padding:'8px 18px', borderRadius:'8px', fontSize:'12px', fontWeight:600, textDecoration:'none' }}>
+                      Connect →
+                    </a>
                   )}
                 </div>
               </div>

@@ -32,35 +32,49 @@ export async function POST(req: NextRequest) {
     }, { status: 400 })
   }
 
-  // Post to LinkedIn via ugcPosts API
-  const authorUrn = `urn:li:person:${account.account_id}`
-  const res = await fetch('https://api.linkedin.com/v2/ugcPosts', {
-    method: 'POST',
-    headers: {
-      'Authorization':              `Bearer ${account.access_token}`,
-      'Content-Type':               'application/json',
-      'X-Restli-Protocol-Version':  '2.0.0',
-    },
-    body: JSON.stringify({
-      author:         authorUrn,
-      lifecycleState: 'PUBLISHED',
-      specificContent: {
-        'com.linkedin.ugc.ShareContent': {
-          shareCommentary:    { text: post.content },
-          shareMediaCategory: 'NONE',
+  let res: Response
+  let data: Record<string, unknown>
+
+  if (platform === 'twitter') {
+    // Twitter v2 tweet
+    const text = post.content.slice(0, 280)
+    res = await fetch('https://api.twitter.com/2/tweets', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${account.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    })
+    data = await res.json() as Record<string, unknown>
+    if (!res.ok) {
+      const errData = data as { detail?: string; title?: string }
+      return NextResponse.json({ error: errData.detail ?? errData.title ?? 'Twitter posting failed' }, { status: 500 })
+    }
+  } else {
+    // LinkedIn ugcPosts
+    const authorUrn = `urn:li:person:${account.account_id}`
+    res = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+      method: 'POST',
+      headers: {
+        'Authorization':             `Bearer ${account.access_token}`,
+        'Content-Type':              'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+      },
+      body: JSON.stringify({
+        author:          authorUrn,
+        lifecycleState:  'PUBLISHED',
+        specificContent: {
+          'com.linkedin.ugc.ShareContent': {
+            shareCommentary:    { text: post.content },
+            shareMediaCategory: 'NONE',
+          },
         },
-      },
-      visibility: {
-        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
-      },
-    }),
-  })
-
-  const data = await res.json()
-
-  if (!res.ok) {
-    const msg = data.message ?? data.status ?? 'LinkedIn posting failed'
-    return NextResponse.json({ error: msg }, { status: 500 })
+        visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+      }),
+    })
+    data = await res.json() as Record<string, unknown>
+    if (!res.ok) {
+      const errData = data as { message?: string; status?: string }
+      return NextResponse.json({ error: errData.message ?? errData.status ?? 'LinkedIn posting failed' }, { status: 500 })
+    }
   }
 
   // Mark as posted
