@@ -52,17 +52,34 @@ export default function DashboardClient() {
     })
   }, [])
 
+  const refreshPosts = async (userId: string) => {
+    const { data: fresh } = await supabase.from('postpilot_posts').select('*').eq('user_id', userId).order('created_at', { ascending:false }).limit(60)
+    if (fresh) setPosts(fresh)
+    return fresh?.length ?? 0
+  }
+
   const generate = async () => {
-    if (!business) return
+    if (!business || !user) return
     setGenerating(true)
+    const countBefore = posts.length
+    // Start polling DB every 2s — posts save server-side even if fetch times out
+    const pollInterval = setInterval(async () => {
+      const count = await refreshPosts(user.id)
+      if (count > countBefore) { clearInterval(pollInterval); setGenerating(false) }
+    }, 2000)
     try {
       const res  = await fetch('/api/generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ business }) })
       const data = await res.json()
-      if (data.posts) {
-        const { data: fresh } = await supabase.from('postpilot_posts').select('*').eq('user_id', user!.id).order('created_at', { ascending:false }).limit(60)
-        if (fresh) setPosts(fresh)
+      if (data.posts || data.error) {
+        clearInterval(pollInterval)
+        await refreshPosts(user.id)
       }
-    } finally { setGenerating(false) }
+    } catch {
+      // fetch timed out — polling will catch the posts when they appear
+    } finally {
+      // Stop polling after 30s max
+      setTimeout(() => { clearInterval(pollInterval); setGenerating(false) }, 30000)
+    }
   }
 
   const updateStatus = async (id: string, status: string) => {
