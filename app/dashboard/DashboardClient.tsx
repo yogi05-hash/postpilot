@@ -123,9 +123,17 @@ export default function DashboardClient() {
   }
 
   const handleUpgrade = async () => {
-    const res = await fetch('/api/stripe/checkout', { method:'POST' })
-    const { url } = await res.json()
-    if (url) window.location.href = url
+    try {
+      const res  = await fetch('/api/stripe/checkout', { method:'POST' })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setPostError(data.error || 'Could not start checkout. Please try again.')
+      }
+    } catch {
+      setPostError('Connection error. Please try again.')
+    }
   }
 
   const filtered = filter === 'all' ? posts : posts.filter(p => p.status === filter)
