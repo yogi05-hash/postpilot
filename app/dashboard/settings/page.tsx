@@ -25,6 +25,7 @@ function SettingsPage() {
   const [saved, setSaved]         = useState(false)
   const [toast, setToast]         = useState('')
   const [socials, setSocials]     = useState<SocialAccount[]>([])
+  const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([])
   const [form, setForm]           = useState({ name: '', description: '', audience: '', niche: '', tone: 'professional' })
   const supabase = createClient()
   const router   = useRouter()
@@ -42,11 +43,18 @@ function SettingsPage() {
       if (profile) setPlan(profile.plan)
       if (biz) setForm({ name: biz.name||'', description: biz.description||'', audience: biz.audience||'', niche: biz.niche||'', tone: biz.tone||'professional' })
       if (socialData) setSocials(socialData)
+
+      // Check Ayrshare connected platforms
+      const statusRes = await fetch('/api/social/ayrshare/status')
+      const statusData = await statusRes.json()
+      if (statusData.platforms) setConnectedPlatforms(statusData.platforms)
+
       setLoading(false)
 
       // Show connection toasts
       const connected = params.get('connected')
       const error     = params.get('error')
+      if (connected === 'social') setToast('✅ Social accounts connected!')
       if (connected === 'twitter')  setToast('✅ Twitter/X connected!')
       if (connected === 'linkedin') setToast('✅ LinkedIn connected!')
       if (error) setToast(`❌ ${error.replace(/_/g,' ')}`)
@@ -76,24 +84,10 @@ function SettingsPage() {
   const labelStyle: React.CSSProperties = { fontSize:'12px', fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:'7px', textTransform:'uppercase', letterSpacing:'0.5px' }
 
   const PLATFORMS = [
-    {
-      id: 'twitter', label: 'Twitter / X', icon: '𝕏',
-      color: 'rgba(29,161,242,0.12)', border: 'rgba(29,161,242,0.25)',
-      connectUrl: '/api/social/twitter/connect',
-      desc: 'Post tweets directly from PostPilot',
-    },
-    {
-      id: 'linkedin', label: 'LinkedIn', icon: 'in',
-      color: 'rgba(10,102,194,0.12)', border: 'rgba(10,102,194,0.25)',
-      connectUrl: '/api/social/linkedin/connect',
-      desc: 'Share posts to your LinkedIn profile',
-    },
-    {
-      id: 'instagram', label: 'Instagram', icon: '📸',
-      color: 'rgba(225,48,108,0.08)', border: 'rgba(225,48,108,0.2)',
-      connectUrl: null,
-      desc: 'Copy post → open Instagram to publish',
-    },
+    { id: 'twitter',   label: 'Twitter / X', icon: '𝕏',  color: 'rgba(29,161,242,0.12)',  border: 'rgba(29,161,242,0.25)' },
+    { id: 'linkedin',  label: 'LinkedIn',    icon: 'in',  color: 'rgba(10,102,194,0.12)',  border: 'rgba(10,102,194,0.25)' },
+    { id: 'instagram', label: 'Instagram',   icon: '📸', color: 'rgba(225,48,108,0.08)', border: 'rgba(225,48,108,0.2)' },
+    { id: 'facebook',  label: 'Facebook',    icon: 'f',   color: 'rgba(24,119,242,0.08)',  border: 'rgba(24,119,242,0.2)' },
   ]
 
   return (
@@ -128,47 +122,42 @@ function SettingsPage() {
         <h2 style={{ fontSize:'18px', fontWeight:800, marginBottom:'6px' }}>Social Accounts</h2>
         <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'13px', marginBottom:'20px' }}>Connect your accounts to post directly from PostPilot.</p>
 
-        <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'40px' }}>
+        {/* Platform status grid */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'16px' }}>
           {PLATFORMS.map(p => {
-            const account = getAccount(p.id)
+            const isConnected = connectedPlatforms.map(x => x.toLowerCase()).includes(p.id)
             return (
-              <div key={p.id} style={{ background:account ? p.color : 'rgba(255,255,255,0.02)', border:`1px solid ${account ? p.border : 'rgba(255,255,255,0.06)'}`, borderRadius:'14px', padding:'16px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
-                  <div style={{ background: p.color, border:`1px solid ${p.border}`, borderRadius:'8px', width:'36px', height:'36px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:800, flexShrink:0 }}>{p.icon}</div>
-                  <div>
-                    <p style={{ margin:'0 0 2px', fontWeight:700, fontSize:'14px' }}>{p.label}</p>
-                    <p style={{ margin:0, fontSize:'12px', color: account ? '#a3e635' : 'rgba(255,255,255,0.3)' }}>
-                      {account ? `✓ Connected as ${account.account_name}` : p.desc}
-                    </p>
-                  </div>
-                </div>
+              <div key={p.id} style={{ background: isConnected ? p.color : 'rgba(255,255,255,0.02)', border:`1px solid ${isConnected ? p.border : 'rgba(255,255,255,0.05)'}`, borderRadius:'12px', padding:'14px 16px', display:'flex', alignItems:'center', gap:'10px' }}>
+                <div style={{ background:p.color, border:`1px solid ${p.border}`, borderRadius:'7px', width:'32px', height:'32px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:800, flexShrink:0 }}>{p.icon}</div>
                 <div>
-                  {account ? (
-                    <button onClick={() => disconnect(p.id)}
-                      style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', color:'#ef4444', padding:'7px 14px', borderRadius:'8px', fontSize:'12px', cursor:'pointer', fontWeight:600 }}>
-                      Disconnect
-                    </button>
-                  ) : p.connectUrl ? (
-                    <a href={p.connectUrl}
-                      style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'8px 16px', borderRadius:'8px', fontSize:'12px', fontWeight:700, textDecoration:'none', display:'inline-block' }}>
-                      Connect →
-                    </a>
-                  ) : (
-                    <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.25)', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', padding:'6px 12px', borderRadius:'8px' }}>
-                      Copy &amp; paste
-                    </span>
-                  )}
+                  <p style={{ margin:'0 0 2px', fontWeight:600, fontSize:'13px' }}>{p.label}</p>
+                  <p style={{ margin:0, fontSize:'11px', color: isConnected ? '#a3e635' : 'rgba(255,255,255,0.25)' }}>
+                    {isConnected ? '✓ Connected' : 'Not connected'}
+                  </p>
                 </div>
               </div>
             )
           })}
         </div>
 
-        {/* Instagram note */}
-        <div style={{ background:'rgba(225,48,108,0.05)', border:'1px solid rgba(225,48,108,0.12)', borderRadius:'10px', padding:'12px 16px', marginBottom:'36px' }}>
-          <p style={{ fontSize:'12px', color:'rgba(255,255,255,0.45)', margin:0, lineHeight:1.6 }}>
-            <strong style={{ color:'rgba(255,255,255,0.6)' }}>📸 Instagram</strong> — Meta requires a Facebook Business account for direct API posting. For now, use the <strong>Copy</strong> button on any post and paste into Instagram. We&apos;re adding full Instagram OAuth in the next update.
-          </p>
+        {/* Single connect button via Ayrshare */}
+        <div style={{ background:'rgba(124,58,237,0.06)', border:'1px solid rgba(124,58,237,0.15)', borderRadius:'14px', padding:'20px', marginBottom:'36px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'12px' }}>
+            <span style={{ fontSize:'22px' }}>🔗</span>
+            <div>
+              <p style={{ margin:'0 0 2px', fontWeight:700, fontSize:'14px' }}>Connect your social accounts</p>
+              <p style={{ margin:0, fontSize:'12px', color:'rgba(255,255,255,0.4)' }}>Login to Twitter, LinkedIn, Instagram and Facebook in one step</p>
+            </div>
+          </div>
+          <a href="/api/social/ayrshare/connect"
+            style={{ display:'inline-block', background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', padding:'11px 24px', borderRadius:'9px', fontWeight:700, fontSize:'13px', textDecoration:'none' }}>
+            {connectedPlatforms.length > 0 ? '⚙️ Manage connected accounts →' : '🔗 Connect accounts →'}
+          </a>
+          {connectedPlatforms.length > 0 && (
+            <p style={{ margin:'10px 0 0', fontSize:'12px', color:'rgba(255,255,255,0.35)' }}>
+              {connectedPlatforms.length} platform{connectedPlatforms.length !== 1 ? 's' : ''} connected: {connectedPlatforms.join(', ')}
+            </p>
+          )}
         </div>
 
         {/* ── BUSINESS PROFILE ────────────────────────────────────────── */}

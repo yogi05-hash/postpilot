@@ -52,8 +52,12 @@ export default function DashboardClient() {
       if (biz) setBusiness(biz)
       else { router.push('/dashboard/onboarding'); return }
       if (postsData) setPosts(postsData)
-      const { data: socialData } = await supabase.from('postpilot_social_accounts').select('platform').eq('user_id', user.id)
-      if (socialData) setConnectedSocials(socialData.map((s: {platform: string}) => s.platform))
+      // Check Ayrshare connected platforms
+      try {
+        const sr = await fetch('/api/social/ayrshare/status')
+        const sd = await sr.json()
+        if (sd.platforms?.length) setConnectedSocials(sd.platforms.map((p: string) => p.toLowerCase()))
+      } catch { /* non-critical */ }
       setLoading(false)
     })
   }, [])
