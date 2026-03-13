@@ -30,6 +30,9 @@ export default function DashboardClient() {
   const [view, setView]             = useState<'list'|'calendar'>('list')
   const [copied, setCopied]         = useState<string|null>(null)
   const [expanding, setExpanding]   = useState<string|null>(null)
+  const [posting, setPosting]       = useState<string|null>(null)
+  const [posted, setPosted]         = useState<string|null>(null)
+  const [connectedSocials, setConnectedSocials] = useState<string[]>([])
   const supabase = createClient()
   const router   = useRouter()
   const params   = useSearchParams()
@@ -43,11 +46,14 @@ export default function DashboardClient() {
         supabase.from('postpilot_profiles').select('plan').eq('id', user.id).single(),
         supabase.from('postpilot_businesses').select('*').eq('user_id', user.id).single(),
         supabase.from('postpilot_posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(60),
+        supabase.from('postpilot_posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1), // dummy to keep array length
       ])
       if (profile) setPlan(profile.plan)
       if (biz) setBusiness(biz)
       else { router.push('/dashboard/onboarding'); return }
       if (postsData) setPosts(postsData)
+      const { data: socialData } = await supabase.from('postpilot_social_accounts').select('platform').eq('user_id', user.id)
+      if (socialData) setConnectedSocials(socialData.map((s: {platform: string}) => s.platform))
       setLoading(false)
     })
   }, [])
@@ -91,6 +97,22 @@ export default function DashboardClient() {
     navigator.clipboard?.writeText(content)
     setCopied(id)
     setTimeout(() => setCopied(null), 2000)
+  }
+
+  const postToSocial = async (postId: string, platform: string, content: string) => {
+    const key = `${postId}-${platform}`
+    setPosting(key)
+    try {
+      if (platform === 'instagram') {
+        navigator.clipboard?.writeText(content)
+        window.open('https://www.instagram.com/', '_blank')
+        return
+      }
+      const res  = await fetch('/api/social/post', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId, platform }) })
+      const data = await res.json()
+      if (data.ok) { setPosted(key); setPosts(p => p.map(x => x.id === postId ? { ...x, status:'posted' } : x)); setTimeout(() => setPosted(null), 3000) }
+      else alert(`Error: ${data.error}`)
+    } finally { setPosting(null) }
   }
 
   const logout = async () => { await supabase.auth.signOut(); router.push('/') }
@@ -270,7 +292,30 @@ export default function DashboardClient() {
                               <button onClick={() => updateStatus(post.id,'approved')} style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'6px 14px', borderRadius:'7px', fontSize:'12px', fontWeight:700, cursor:'pointer' }}>✓ Approve</button>
                               <button onClick={() => updateStatus(post.id,'rejected')} style={{ background:'rgba(239,68,68,0.08)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.15)', padding:'6px 12px', borderRadius:'7px', fontSize:'12px', cursor:'pointer' }}>✗ Reject</button>
                             </>}
-                            {post.status === 'approved' && <span style={{ fontSize:'11px', color:'#a78bfa', fontWeight:600, alignSelf:'center' }}>✓ Approved</span>}
+                            {post.status === 'approved' && (
+                              <>
+                                <span style={{ fontSize:'11px', color:'#a78bfa', fontWeight:600, alignSelf:'center' }}>✓ Approved</span>
+                                {/* Post Now buttons for connected platforms */}
+                                {connectedSocials.includes(post.platform) && (
+                                  <button onClick={() => postToSocial(post.id, post.platform, post.content)}
+                                    disabled={posting === `${post.id}-${post.platform}`}
+                                    style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'6px 14px', borderRadius:'7px', fontSize:'12px', fontWeight:700, cursor:'pointer' }}>
+                                    {posting === `${post.id}-${post.platform}` ? '⏳ Posting...' : posted === `${post.id}-${post.platform}` ? '✓ Posted!' : `🚀 Post to ${P_LABEL[post.platform]}`}
+                                  </button>
+                                )}
+                                {post.platform === 'instagram' && (
+                                  <button onClick={() => postToSocial(post.id, 'instagram', post.content)}
+                                    style={{ background:'rgba(225,48,108,0.1)', border:'1px solid rgba(225,48,108,0.2)', color:'#f9a8d4', padding:'6px 12px', borderRadius:'7px', fontSize:'12px', cursor:'pointer' }}>
+                                    📸 Copy &amp; Open Instagram
+                                  </button>
+                                )}
+                                {!connectedSocials.includes(post.platform) && post.platform !== 'instagram' && (
+                                  <Link href="/dashboard/settings" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.35)', padding:'6px 12px', borderRadius:'7px', fontSize:'11px', textDecoration:'none' }}>
+                                    Connect {P_LABEL[post.platform]} →
+                                  </Link>
+                                )}
+                              </>
+                            )}
                             {post.status === 'rejected' && <button onClick={() => updateStatus(post.id,'pending')} style={{ background:'transparent', color:'rgba(255,255,255,0.3)', border:'1px solid rgba(255,255,255,0.08)', padding:'6px 12px', borderRadius:'7px', fontSize:'12px', cursor:'pointer' }}>Restore</button>}
 
                             <button onClick={() => copyPost(post.id, post.content)}
