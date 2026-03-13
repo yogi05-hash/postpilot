@@ -8,16 +8,26 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.redirect(new URL('/login', req.url))
 
   const clientId = process.env.LINKEDIN_CLIENT_ID
-  if (!clientId) return NextResponse.json({ error: 'LinkedIn app not configured' }, { status: 500 })
+  if (!clientId) {
+    return NextResponse.redirect(
+      new URL('/dashboard/settings?error=linkedin_not_configured', req.url)
+    )
+  }
 
-  const state = crypto.randomBytes(16).toString('hex')
-  const res   = NextResponse.redirect(
-    `https://www.linkedin.com/oauth/v2/authorization?` +
-    `response_type=code&client_id=${clientId}` +
-    `&redirect_uri=${encodeURIComponent(process.env.NEXT_PUBLIC_BASE_URL + '/api/social/linkedin/callback')}` +
-    `&scope=openid%20profile%20w_member_social` +
-    `&state=${state}`
-  )
-  res.cookies.set('li_oauth_state', state, { httpOnly: true, secure: true, maxAge: 600, path: '/' })
+  const state       = crypto.randomBytes(16).toString('hex')
+  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/social/linkedin/callback`
+
+  const authUrl = new URL('https://www.linkedin.com/oauth/v2/authorization')
+  authUrl.searchParams.set('response_type', 'code')
+  authUrl.searchParams.set('client_id',     clientId)
+  authUrl.searchParams.set('redirect_uri',  redirectUri)
+  authUrl.searchParams.set('scope',         'openid profile w_member_social')
+  authUrl.searchParams.set('state',         state)
+
+  const res = NextResponse.redirect(authUrl.toString())
+  res.cookies.set('li_oauth_state', state, {
+    httpOnly: true, secure: true, maxAge: 600, path: '/',
+    sameSite: 'lax',
+  })
   return res
 }
