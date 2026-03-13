@@ -16,33 +16,24 @@ export async function POST(req: NextRequest) {
 
     const { business } = await req.json()
 
-    const prompt = `You are a world-class social media strategist. Generate 7 posts for the following business:
+    const prompt = `Social media strategist. Generate 7 posts for:
+Business: ${business.name} — ${business.description}
+Audience: ${business.audience} | Niche: ${business.niche} | Tone: ${business.tone}
 
-Business: ${business.name}
-Description: ${business.description}
-Target audience: ${business.audience}
-Niche: ${business.niche}
-Tone: ${business.tone}
-
-Generate exactly 7 posts in this JSON format. Make them genuinely compelling, specific, and valuable - not generic. Use current trends and real insights:
-
-{
-  "posts": [
-    {"platform": "twitter", "content": "post content here (max 280 chars, punchy, no hashtag spam)"},
-    {"platform": "linkedin", "content": "post content here (professional, 150-200 words, thought leadership)"},
-    {"platform": "instagram", "content": "post content here (engaging caption, 100-150 words, 3-5 relevant hashtags)"},
-    {"platform": "twitter", "content": "second twitter post"},
-    {"platform": "linkedin", "content": "second linkedin post"},
-    {"platform": "twitter", "content": "third twitter post - a thread starter"},
-    {"platform": "instagram", "content": "second instagram post"}
-  ]
-}
-
-Return ONLY the JSON, no other text.`
+Return ONLY this JSON (no other text):
+{"posts":[
+{"platform":"twitter","content":"<280 chars, punchy hook, no hashtag spam>"},
+{"platform":"linkedin","content":"<100 words, thought leadership, end with question>"},
+{"platform":"instagram","content":"<80 words caption + 5 hashtags>"},
+{"platform":"twitter","content":"<280 chars, data point or bold claim>"},
+{"platform":"linkedin","content":"<100 words, practical tip>"},
+{"platform":"twitter","content":"<280 chars, relatable pain point>"},
+{"platform":"instagram","content":"<80 words behind-the-scenes + 5 hashtags>"}
+]}`
 
     const message = await getAnthropic().messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
+      model: 'claude-haiku-4-5',
+      max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     })
 
