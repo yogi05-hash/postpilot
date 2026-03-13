@@ -149,10 +149,11 @@ function SettingsPage() {
               <p style={{ margin:0, fontSize:'12px', color:'rgba(255,255,255,0.4)' }}>Login to Twitter, LinkedIn, Instagram and Facebook in one step</p>
             </div>
           </div>
-          <a href="/api/social/ayrshare/connect"
+          <a href="https://app.ayrshare.com/dashboard/social-accounts" target="_blank" rel="noreferrer"
             style={{ display:'inline-block', background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', padding:'11px 24px', borderRadius:'9px', fontWeight:700, fontSize:'13px', textDecoration:'none' }}>
-            {connectedPlatforms.length > 0 ? '⚙️ Manage connected accounts →' : '🔗 Connect accounts →'}
+            {connectedPlatforms.length > 0 ? '⚙️ Manage connected accounts ↗' : '🔗 Connect accounts ↗'}
           </a>
+          <p style={{ margin:'8px 0 0', fontSize:'11px', color:'rgba(255,255,255,0.25)' }}>Opens Ayrshare — connect Twitter, LinkedIn, Instagram once. PostPilot posts for you.</p>
           {connectedPlatforms.length > 0 && (
             <p style={{ margin:'10px 0 0', fontSize:'12px', color:'rgba(255,255,255,0.35)' }}>
               {connectedPlatforms.length} platform{connectedPlatforms.length !== 1 ? 's' : ''} connected: {connectedPlatforms.join(', ')}
