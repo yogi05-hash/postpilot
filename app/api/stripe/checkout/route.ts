@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     params.append('customer', customerId)
     params.append('mode', 'subscription')
     params.append('payment_method_types[0]', 'card')
-    params.append('line_items[0][price]', 'price_1TAZpeAGvxnqRxUc54HOuOYc')
+    params.append('line_items[0][price]', 'price_1TAUybA2q8UNYVztyjGr7Ey1')
     params.append('line_items[0][quantity]', '1')
     params.append('success_url', `${origin}/dashboard?upgraded=true`)
     params.append('cancel_url', `${origin}/pricing`)
