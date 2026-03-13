@@ -1,0 +1,181 @@
+'use client'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase-browser'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+
+const TONES = [
+  { id: 'professional', icon: '🎯', label: 'Professional', desc: 'Authoritative, credible' },
+  { id: 'friendly',     icon: '😊', label: 'Friendly',     desc: 'Warm, approachable' },
+  { id: 'bold',         icon: '🔥', label: 'Bold',         desc: 'Direct, provocative' },
+  { id: 'educational',  icon: '📚', label: 'Educational',  desc: 'Informative, helpful' },
+]
+
+export default function SettingsPage() {
+  const [user, setUser]           = useState<{ id: string; email?: string } | null>(null)
+  const [plan, setPlan]           = useState('free')
+  const [loading, setLoading]     = useState(true)
+  const [saving, setSaving]       = useState(false)
+  const [saved, setSaved]         = useState(false)
+  const [form, setForm]           = useState({
+    name: '', description: '', audience: '', niche: '', tone: 'professional'
+  })
+  const supabase = createClient()
+  const router   = useRouter()
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { router.push('/login'); return }
+      setUser(user)
+      const [{ data: profile }, { data: biz }] = await Promise.all([
+        supabase.from('postpilot_profiles').select('plan').eq('id', user.id).single(),
+        supabase.from('postpilot_businesses').select('*').eq('user_id', user.id).single(),
+      ])
+      if (profile) setPlan(profile.plan)
+      if (biz) setForm({ name: biz.name||'', description: biz.description||'', audience: biz.audience||'', niche: biz.niche||'', tone: biz.tone||'professional' })
+      setLoading(false)
+    })
+  }, [])
+
+  const save = async () => {
+    if (!user || !form.name || !form.description) return
+    setSaving(true)
+    await supabase.from('postpilot_businesses').update({
+      name: form.name, description: form.description,
+      audience: form.audience, niche: form.niche, tone: form.tone,
+    }).eq('user_id', user.id)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  const logout = async () => { await supabase.auth.signOut(); router.push('/') }
+
+  if (loading) return <div style={{ background:'#050510', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.3)', fontFamily:'sans-serif' }}>Loading...</div>
+
+  return (
+    <div style={{ fontFamily:'-apple-system,BlinkMacSystemFont,"Inter",sans-serif', background:'#050510', color:'#fff', minHeight:'100vh' }}>
+      {/* NAV */}
+      <nav style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 32px', borderBottom:'1px solid rgba(255,255,255,0.05)', background:'rgba(5,5,16,0.95)', backdropFilter:'blur(20px)', position:'sticky', top:0, zIndex:100 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
+          <Link href="/dashboard" style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
+            <span style={{ fontSize:'16px' }}>🚀</span>
+            <span style={{ fontSize:'15px', fontWeight:800, background:'linear-gradient(135deg,#a78bfa,#60a5fa)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>PostPilot</span>
+          </Link>
+          <span style={{ color:'rgba(255,255,255,0.2)' }}>›</span>
+          <span style={{ fontSize:'13px', color:'rgba(255,255,255,0.4)' }}>Business Settings</span>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+          {plan === 'pro' && <span style={{ fontSize:'11px', background:'rgba(124,58,237,0.15)', color:'#a78bfa', border:'1px solid rgba(124,58,237,0.3)', padding:'3px 10px', borderRadius:'100px', fontWeight:700 }}>PRO</span>}
+          <Link href="/dashboard" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.4)', padding:'7px 14px', borderRadius:'7px', fontSize:'12px', textDecoration:'none' }}>← Dashboard</Link>
+          <button onClick={logout} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.3)', padding:'5px 12px', borderRadius:'6px', fontSize:'11px', cursor:'pointer' }}>Sign out</button>
+        </div>
+      </nav>
+
+      <div style={{ maxWidth:'640px', margin:'0 auto', padding:'40px 28px' }}>
+        <h1 style={{ fontSize:'22px', fontWeight:800, marginBottom:'6px' }}>Business Profile</h1>
+        <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'13px', marginBottom:'32px', lineHeight:1.6 }}>
+          PostPilot reads this every time it generates content. The more specific you are, the better the posts.
+        </p>
+
+        {/* How AI uses this */}
+        <div style={{ background:'rgba(124,58,237,0.06)', border:'1px solid rgba(124,58,237,0.15)', borderRadius:'12px', padding:'16px 18px', marginBottom:'28px', display:'flex', gap:'12px' }}>
+          <span style={{ fontSize:'20px', flexShrink:0 }}>🤖</span>
+          <div>
+            <p style={{ fontSize:'13px', fontWeight:600, marginBottom:'4px', color:'#a78bfa' }}>How PostPilot uses this</p>
+            <p style={{ fontSize:'12px', color:'rgba(255,255,255,0.45)', lineHeight:1.65, margin:0 }}>
+              Your business description, audience and tone are injected directly into the AI prompt. Every post is written specifically for your brand — not generic templates. Update it anytime and the next generation will reflect the changes.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', gap:'18px' }}>
+          {/* Business name */}
+          <div>
+            <label style={{ fontSize:'12px', fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:'7px', textTransform:'uppercase', letterSpacing:'0.5px' }}>Business name</label>
+            <input
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="e.g. bilabs.ai"
+              style={{ width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'10px', padding:'12px 14px', color:'#fff', fontSize:'14px', outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label style={{ fontSize:'12px', fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:'7px', textTransform:'uppercase', letterSpacing:'0.5px' }}>What you do <span style={{ color:'rgba(255,255,255,0.25)', fontWeight:400, textTransform:'none' }}>(be specific — this is the most important field)</span></label>
+            <textarea
+              value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="e.g. AI automation agency helping UK small businesses save 10 hours/week with chatbots, voice assistants and workflow automation"
+              rows={3}
+              style={{ width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'10px', padding:'12px 14px', color:'#fff', fontSize:'14px', outline:'none', resize:'vertical', lineHeight:1.6, boxSizing:'border-box' }}
+            />
+          </div>
+
+          {/* Audience */}
+          <div>
+            <label style={{ fontSize:'12px', fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:'7px', textTransform:'uppercase', letterSpacing:'0.5px' }}>Target audience</label>
+            <input
+              value={form.audience}
+              onChange={e => setForm(f => ({ ...f, audience: e.target.value }))}
+              placeholder="e.g. UK small business owners, recruiters, mortgage brokers (5-50 staff)"
+              style={{ width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'10px', padding:'12px 14px', color:'#fff', fontSize:'14px', outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+
+          {/* Niche */}
+          <div>
+            <label style={{ fontSize:'12px', fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:'7px', textTransform:'uppercase', letterSpacing:'0.5px' }}>Industry / niche</label>
+            <input
+              value={form.niche}
+              onChange={e => setForm(f => ({ ...f, niche: e.target.value }))}
+              placeholder="e.g. AI automation, SaaS, fintech, e-commerce"
+              style={{ width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'10px', padding:'12px 14px', color:'#fff', fontSize:'14px', outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+
+          {/* Tone */}
+          <div>
+            <label style={{ fontSize:'12px', fontWeight:600, color:'rgba(255,255,255,0.5)', display:'block', marginBottom:'10px', textTransform:'uppercase', letterSpacing:'0.5px' }}>Brand tone</label>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
+              {TONES.map(t => (
+                <button key={t.id} onClick={() => setForm(f => ({ ...f, tone: t.id }))}
+                  style={{ background:form.tone === t.id ? 'rgba(124,58,237,0.12)' : 'rgba(255,255,255,0.03)', border:`1px solid ${form.tone === t.id ? 'rgba(124,58,237,0.4)' : 'rgba(255,255,255,0.07)'}`, borderRadius:'10px', padding:'12px 14px', textAlign:'left', cursor:'pointer' }}>
+                  <p style={{ fontSize:'13px', fontWeight:600, marginBottom:'2px', color:form.tone === t.id ? '#a78bfa' : '#fff' }}>{t.icon} {t.label}</p>
+                  <p style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', margin:0 }}>{t.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Save button */}
+          <button onClick={save} disabled={saving || !form.name || !form.description}
+            style={{ background:saved ? 'rgba(34,197,94,0.15)' : 'linear-gradient(135deg,#7c3aed,#2563eb)', border:saved ? '1px solid rgba(34,197,94,0.3)' : 'none', color:saved ? '#22c55e' : '#fff', padding:'14px', borderRadius:'10px', fontSize:'14px', fontWeight:700, cursor:'pointer', marginTop:'8px' }}>
+            {saving ? 'Saving...' : saved ? '✓ Saved! Next generation will use updated profile.' : 'Save changes'}
+          </button>
+        </div>
+
+        {/* Content preview */}
+        <div style={{ marginTop:'36px', background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:'14px', padding:'20px' }}>
+          <p style={{ fontSize:'12px', fontWeight:600, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'12px' }}>What PostPilot generates from this</p>
+          <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+            {[
+              { icon:'𝕏', label:'Twitter/X', desc:'3 punchy posts/week — hooks, bold claims, relatable pain points' },
+              { icon:'in', label:'LinkedIn', desc:'2 posts/week — thought leadership, practical tips with authority' },
+              { icon:'📸', label:'Instagram', desc:'2 posts/week — engaging captions with platform-specific hashtags' },
+            ].map(p => (
+              <div key={p.label} style={{ display:'flex', gap:'12px', alignItems:'center' }}>
+                <span style={{ fontSize:'16px', width:'24px', textAlign:'center', flexShrink:0 }}>{p.icon}</span>
+                <div>
+                  <span style={{ fontSize:'12px', fontWeight:600 }}>{p.label} </span>
+                  <span style={{ fontSize:'12px', color:'rgba(255,255,255,0.35)' }}>{p.desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

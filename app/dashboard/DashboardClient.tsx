@@ -120,6 +120,7 @@ export default function DashboardClient() {
             : <button onClick={handleUpgrade} style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'7px 16px', borderRadius:'7px', fontSize:'12px', fontWeight:700, cursor:'pointer' }}>Upgrade £14/mo</button>
           }
           <span style={{ fontSize:'12px', color:'rgba(255,255,255,0.3)' }}>{user?.email}</span>
+          <Link href="/dashboard/settings" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.35)', padding:'5px 12px', borderRadius:'6px', fontSize:'11px', textDecoration:'none' }}>⚙️ Settings</Link>
           <button onClick={logout} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.3)', padding:'5px 12px', borderRadius:'6px', fontSize:'11px', cursor:'pointer' }}>Sign out</button>
         </div>
       </nav>
