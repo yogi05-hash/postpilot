@@ -1,5 +1,19 @@
 import Stripe from 'stripe'
-// stripe v20 uses a newer API version than the type expects — ts-ignore avoids build error
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-export const stripe: Stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '')
+
+let _stripe: Stripe | null = null
+
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '')
+  }
+  return _stripe
+}
+
+// Keep named export for backwards compat
+export const stripe = {
+  get customers() { return getStripe().customers },
+  get checkout() { return getStripe().checkout },
+  get webhooks() { return getStripe().webhooks },
+}
