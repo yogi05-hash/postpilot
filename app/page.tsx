@@ -30,7 +30,7 @@ export default function Home() {
         <h1 style={{ fontSize: '64px', fontWeight: 900, lineHeight: 1.0, letterSpacing: '-3px', marginBottom: '24px' }}>
           <span style={{ background: 'linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.6) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Your AI marketing team.</span>
           <br />
-          <span style={{ background: 'linear-gradient(135deg,#a78bfa,#60a5fa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>For £29 a month.</span>
+          <span style={{ background: 'linear-gradient(135deg,#a78bfa,#60a5fa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>For £14 a month.</span>
         </h1>
 
         <p style={{ fontSize: '20px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: '580px', margin: '0 auto 48px' }}>
@@ -121,7 +121,7 @@ export default function Home() {
                 ['Approve in 1 tap', '❌', '❌', '✅'],
                 ['Scheduling', '✅', '✅', '✅'],
                 ['Analytics', '✅', '✅', '✅'],
-                ['Price/month', '$18', '$99', '£29 🎉'],
+                ['Price/month', '$18', '$99', '£14 🎉'],
               ].map(([feat, ...vals]) => (
                 <tr key={feat}>
                   <td style={{ padding: '12px 18px', fontSize: '14px', color: 'rgba(255,255,255,0.7)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>{feat}</td>
@@ -189,7 +189,7 @@ export default function Home() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px' }}>
           {[
-            { name:'Sarah K.', role:'Mortgage broker, London', quote:'"I spent 3 hours every Sunday writing content. Now I spend 5 minutes approving it. PostPilot is the best £29 I spend every month."', stars:5 },
+            { name:'Sarah K.', role:'Mortgage broker, London', quote:'"I spent 3 hours every Sunday writing content. Now I spend 5 minutes approving it. PostPilot is the best £14 I spend every month."', stars:5 },
             { name:'Raj P.', role:'Recruitment agency, Manchester', quote:'"Finally found a content tool that writes like me. Not generic AI. Our LinkedIn engagement went up 3x in the first month."', stars:5 },
             { name:'Emma T.', role:'E-commerce founder, Birmingham', quote:'"Set it up on Monday. By Thursday I had my first DM from Instagram saying they found me through a post. Actual ROI."', stars:5 },
           ].map(t => (
@@ -214,7 +214,7 @@ export default function Home() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           {[
             { plan:'Free', price:'£0', features:['3 AI posts/week','1 business','All 3 platforms','Approve/reject flow'], cta:'Start free', href:'/signup', highlight:false },
-            { plan:'Pro', price:'£29/mo', features:['Unlimited AI posts','Weekly drops','Hashtag intelligence','Analytics dashboard','Content calendar'], cta:'Get Pro', href:'/signup', highlight:true },
+            { plan:'Pro', price:'£14/mo', features:['Unlimited AI posts','Weekly drops','Hashtag intelligence','Analytics dashboard','Content calendar'], cta:'Get Pro', href:'/signup', highlight:true },
           ].map(p => (
             <div key={p.plan} style={{ background: p.highlight ? 'linear-gradient(160deg,rgba(124,58,237,0.12),rgba(37,99,235,0.08))' : 'rgba(255,255,255,0.02)', border: `1.5px solid ${p.highlight ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '20px', padding: '28px', textAlign: 'left' }}>
               <p style={{ fontSize: '12px', color: p.highlight ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: '1px', marginBottom: '8px' }}>{p.plan.toUpperCase()}</p>

@@ -54,7 +54,7 @@ export default function Pricing() {
           <div style={{ background: 'linear-gradient(160deg,rgba(124,58,237,0.15),rgba(37,99,235,0.15))', border: '1px solid rgba(124,58,237,0.35)', borderRadius: '20px', padding: '36px 28px', textAlign: 'left', position: 'relative' }}>
             <span style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#7c3aed,#2563eb)', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '4px 14px', borderRadius: '100px', whiteSpace: 'nowrap' }}>MOST POPULAR</span>
             <p style={{ fontSize: '12px', color: '#a78bfa', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 20px' }}>Pro</p>
-            <p style={{ fontSize: '48px', fontWeight: 900, letterSpacing: '-2px', margin: '0 0 6px' }}>£29</p>
+            <p style={{ fontSize: '48px', fontWeight: 900, letterSpacing: '-2px', margin: '0 0 6px' }}>£14</p>
             <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '14px', margin: '0 0 28px' }}>per month</p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {['Unlimited AI posts', 'All 3 platforms', 'Twitter auto-post', 'Weekly content drops', 'Engagement analytics', 'AI learns from your data', 'Priority support'].map(f => (
@@ -63,14 +63,14 @@ export default function Pricing() {
             </ul>
             <button onClick={handleUpgrade} disabled={loading}
               style={{ display: 'block', width: '100%', background: 'linear-gradient(135deg,#7c3aed,#2563eb)', color: '#fff', border: 'none', padding: '13px', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-              {loading ? 'Loading...' : 'Start Pro — £29/mo'}
+              {loading ? 'Loading...' : 'Start Pro — £14/mo'}
             </button>
           </div>
 
           {/* Agency */}
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '36px 28px', textAlign: 'left' }}>
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 20px' }}>Agency</p>
-            <p style={{ fontSize: '48px', fontWeight: 900, letterSpacing: '-2px', margin: '0 0 6px' }}>£99</p>
+            <p style={{ fontSize: '48px', fontWeight: 900, letterSpacing: '-2px', margin: '0 0 6px' }}>£49</p>
             <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '14px', margin: '0 0 28px' }}>per month</p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {['Everything in Pro', '10 client workspaces', 'White-label dashboard', 'Client reporting', 'Dedicated support'].map(f => (

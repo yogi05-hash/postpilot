@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [{ price: 'price_1TAKE6A2q8UNYVzt9kxhCBTC', quantity: 1 }],
+      line_items: [{ price: 'price_1TAUybA2q8UNYVztyjGr7Ey1', quantity: 1 }],
       success_url: `${origin}/dashboard?upgraded=true`,
       cancel_url: `${origin}/pricing`,
       metadata: { supabase_user_id: user.id },

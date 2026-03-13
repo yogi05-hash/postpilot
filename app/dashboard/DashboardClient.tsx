@@ -117,7 +117,7 @@ export default function DashboardClient() {
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           {plan === 'pro'
             ? <span style={{ fontSize:'11px', background:'rgba(124,58,237,0.15)', color:'#a78bfa', border:'1px solid rgba(124,58,237,0.3)', padding:'3px 10px', borderRadius:'100px', fontWeight:700 }}>PRO</span>
-            : <button onClick={handleUpgrade} style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'7px 16px', borderRadius:'7px', fontSize:'12px', fontWeight:700, cursor:'pointer' }}>Upgrade £29/mo</button>
+            : <button onClick={handleUpgrade} style={{ background:'linear-gradient(135deg,#7c3aed,#2563eb)', color:'#fff', border:'none', padding:'7px 16px', borderRadius:'7px', fontSize:'12px', fontWeight:700, cursor:'pointer' }}>Upgrade £14/mo</button>
           }
           <span style={{ fontSize:'12px', color:'rgba(255,255,255,0.3)' }}>{user?.email}</span>
           <button onClick={logout} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.3)', padding:'5px 12px', borderRadius:'6px', fontSize:'11px', cursor:'pointer' }}>Sign out</button>
