@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    const origin = req.headers.get('origin') || 'https://postpilot-lovat.vercel.app'
+    const origin = req.headers.get('origin') || 'https://postpilot.online'
 
     // Get or create Stripe customer
     let customerId: string
@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
     params.append('payment_method_types[0]', 'card')
     params.append('line_items[0][price]', 'price_1TAUybA2q8UNYVztyjGr7Ey1')
     params.append('line_items[0][quantity]', '1')
+    params.append('subscription_data[trial_period_days]', '7')
     params.append('success_url', `${origin}/dashboard?upgraded=true`)
     params.append('cancel_url', `${origin}/pricing`)
     params.append('metadata[supabase_user_id]', user.id)
