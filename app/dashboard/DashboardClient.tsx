@@ -44,8 +44,18 @@ export default function DashboardClient() {
       setUser(user)
       if (params.get('upgraded') === 'true') setUpgraded(true)
 
+      // If coming from Stripe, poll until webhook updates plan to 'pro' (max 10s)
+      let profileData = null
+      if (params.get('upgraded') === 'true') {
+        for (let i = 0; i < 5; i++) {
+          await new Promise(r => setTimeout(r, 2000))
+          const { data: p } = await supabase.from('postpilot_profiles').select('plan').eq('id', user.id).single()
+          if (p?.plan === 'pro') { profileData = p; break }
+        }
+      }
+
       const [{ data: profile }, { data: biz }, { data: postsData }, { data: socialData }] = await Promise.all([
-        supabase.from('postpilot_profiles').select('plan').eq('id', user.id).single(),
+        profileData ? Promise.resolve({ data: profileData }) : supabase.from('postpilot_profiles').select('plan').eq('id', user.id).single(),
         supabase.from('postpilot_businesses').select('*').eq('user_id', user.id).single(),
         supabase.from('postpilot_posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(60),
         supabase.from('postpilot_social_accounts').select('platform').eq('user_id', user.id),
