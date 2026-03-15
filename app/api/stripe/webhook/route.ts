@@ -90,10 +90,18 @@ export async function POST(req: NextRequest) {
 
   if (event.type === 'customer.subscription.deleted') {
     const sub = event.data.object
-    await supabase
+    // Try by subscription ID first, then fall back to customer ID
+    const { data: bySubId } = await supabase
       .from('postpilot_profiles')
       .update({ plan: 'free', stripe_subscription_id: null })
       .eq('stripe_subscription_id', sub.id)
+      .select('id')
+    if (!bySubId?.length) {
+      await supabase
+        .from('postpilot_profiles')
+        .update({ plan: 'free', stripe_subscription_id: null })
+        .eq('stripe_customer_id', sub.customer)
+    }
   }
 
   return NextResponse.json({ received: true })
