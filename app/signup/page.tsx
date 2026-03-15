@@ -16,6 +16,8 @@ export default function Signup() {
     e.preventDefault(); setLoading(true); setError('')
     const { error } = await supabase.auth.signUp({ email, password })
     if (error) { setError(error.message); setLoading(false); return }
+    // Send welcome email + notify Yogi (fire and forget)
+    fetch('/api/notify-signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) }).catch(() => {})
     router.push('/dashboard/onboarding')
   }
 
@@ -29,7 +31,7 @@ export default function Signup() {
       </Link>
       <div style={{ width: '100%', maxWidth: '420px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '44px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '8px' }}>Create your account</h1>
-        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', marginBottom: '32px' }}>Free forever. 3 AI posts/week included.</p>
+        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', marginBottom: '32px' }}>7-day free trial. No credit card required.</p>
         <form onSubmit={handle} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
             <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: '7px', fontWeight: 500 }}>Email address</label>
