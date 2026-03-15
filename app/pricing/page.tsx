@@ -5,18 +5,22 @@ import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 
 export default function Pricing() {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState<null | 'trial' | 'now'>(null)
   const supabase = createClient()
   const router = useRouter()
 
-  const handleUpgrade = async () => {
-    setLoading(true)
+  const handleUpgrade = async (withTrial: boolean) => {
+    setLoading(withTrial ? 'trial' : 'now')
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/signup?redirect=pricing'); return }
-    const res = await fetch('/api/stripe/checkout', { method: 'POST' })
+    const res = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trial: withTrial }),
+    })
     const { url } = await res.json()
     if (url) window.location.href = url
-    else setLoading(false)
+    else setLoading(null)
   }
 
   return (
@@ -61,10 +65,15 @@ export default function Pricing() {
                 <li key={f} style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', display: 'flex', gap: '10px', alignItems: 'center' }}><span style={{ color: '#a78bfa', fontSize: '12px' }}>✓</span>{f}</li>
               ))}
             </ul>
-            <button onClick={handleUpgrade} disabled={loading}
-              style={{ display: 'block', width: '100%', background: 'linear-gradient(135deg,#7c3aed,#2563eb)', color: '#fff', border: 'none', padding: '13px', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-              {loading ? 'Loading...' : 'Start Pro — £14/mo'}
+            <button onClick={() => handleUpgrade(true)} disabled={!!loading}
+              style={{ display: 'block', width: '100%', background: 'linear-gradient(135deg,#7c3aed,#2563eb)', color: '#fff', border: 'none', padding: '13px', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, marginBottom: '10px' }}>
+              {loading === 'trial' ? 'Loading...' : '🎁 Start 7-day free trial'}
             </button>
+            <button onClick={() => handleUpgrade(false)} disabled={!!loading}
+              style={{ display: 'block', width: '100%', background: 'transparent', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.15)', padding: '12px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+              {loading === 'now' ? 'Loading...' : 'Subscribe now — £14/mo'}
+            </button>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', textAlign: 'center', marginTop: '10px' }}>No contracts. Cancel anytime.</p>
           </div>
 
           {/* Agency */}
