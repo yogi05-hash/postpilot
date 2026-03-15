@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     params.append('customer', customerId)
     params.append('mode', 'subscription')
     params.append('payment_method_types[0]', 'card')
-    params.append('line_items[0][price]', 'price_1TAUybA2q8UNYVztyjGr7Ey1')
+    params.append('line_items[0][price]', 'price_1TBG6JA2q8UNYVztZzmhK1LX') // TEST 30p - swap back to price_1TAUybA2q8UNYVztyjGr7Ey1 after test
     params.append('line_items[0][quantity]', '1')
     params.append('subscription_data[trial_period_days]', '7')
     params.append('success_url', `${origin}/dashboard?upgraded=true`)
