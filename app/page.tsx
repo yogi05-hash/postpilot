@@ -34,12 +34,12 @@ export default function Home() {
         </h1>
 
         <p style={{ fontSize: '20px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: '580px', margin: '0 auto 48px' }}>
-          Describe your business once. PostPilot researches your niche, writes a week of posts for Twitter, LinkedIn & Instagram, and sends them for your approval every Monday.
+          Get 30 AI-written posts every month across Twitter, LinkedIn & Instagram. Describe your business once. Every Monday, get 7 fresh posts ready for your approval.
         </p>
 
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '56px' }}>
           <Link href="/signup" style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)', color: '#fff', padding: '15px 32px', borderRadius: '10px', textDecoration: 'none', fontSize: '16px', fontWeight: 700, boxShadow: '0 0 50px rgba(124,58,237,0.4)' }}>
-            Start free — 7 posts/week →
+            Start free — 30 posts/month →
           </Link>
           <Link href="#demo" style={{ border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', padding: '15px 28px', borderRadius: '10px', textDecoration: 'none', fontSize: '15px', fontWeight: 500 }}>
             Watch 60s demo
@@ -51,6 +51,26 @@ export default function Home() {
           {['✦ No more blank page', '✦ 3+ hours saved weekly', '✦ Posts that actually sound like you', '✦ Cancel anytime'].map(t => (
             <span key={t} style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>{t}</span>
           ))}
+        </div>
+      </section>
+
+      {/* WHAT'S INCLUDED */}
+      <section style={{ background: 'rgba(124,58,237,0.03)', borderTop: '1px solid rgba(124,58,237,0.1)', borderBottom: '1px solid rgba(124,58,237,0.1)', padding: '40px 0', marginBottom: '60px' }}>
+        <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 40px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '24px', textAlign: 'center', color: '#a78bfa' }}>What you get for £14/month:</h3>
+          <div style={{ display: 'flex', gap: '40px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            {[
+              { num: '30', desc: 'AI posts monthly' },
+              { num: '7', desc: 'Fresh posts weekly' },
+              { num: '3', desc: 'Social platforms' },
+              { num: '60', desc: 'Seconds to approve' },
+            ].map(stat => (
+              <div key={stat.num} style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '36px', fontWeight: 900, color: '#a78bfa', letterSpacing: '-1px' }}>{stat.num}</p>
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>{stat.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -144,7 +164,7 @@ export default function Home() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px' }}>
           {[
             { icon:'🧠', title:'AI that learns your voice', desc:'Describe your tone once. PostPilot writes every post like you wrote it yourself — not generic AI slop.' },
-            { icon:'📅', title:'Weekly content drops', desc:'Every Monday: 7 posts across 3 platforms, researched, written, formatted. Ready for 1-tap approval.' },
+            { icon:'📅', title:'Weekly content drops', desc:'Every Monday: 7 fresh posts (30/month) across LinkedIn, Twitter & Instagram. Researched, written, ready to approve.' },
             { icon:'🔍', title:'Researches your niche', desc:'AI scans trending topics, competitor content, and industry news. Your posts are always timely and relevant.' },
             { icon:'✏️', title:'Edit before posting', desc:'AI drafts. You have the final word. Always. Edit, regenerate, or skip — full control stays with you.' },
             { icon:'📊', title:'Content analytics', desc:'Track what gets engagement. PostPilot learns from your results and improves your content weekly.' },
@@ -170,7 +190,7 @@ export default function Home() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '20px' }}>
           {[
             { n:'01', title:'Tell us about your business', desc:'Name, niche, audience, tone. Takes 5 minutes once. PostPilot remembers everything.' },
-            { n:'02', title:'Get your Monday content drop', desc:'7 posts. 3 platforms. Researched and written every week. Delivered to your inbox.' },
+            { n:'02', title:'Get your Monday content drop', desc:'7 posts every Monday (30/month). LinkedIn, Twitter, Instagram. Fresh, researched, ready to approve.' },
             { n:'03', title:'Approve. Done.', desc:'Tap approve — it goes live. Tap edit — tweak it. Tap reject — we regenerate. 30 seconds per post.' },
           ].map(s => (
             <div key={s.n} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px' }}>
@@ -213,8 +233,8 @@ export default function Home() {
         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '16px', marginBottom: '40px' }}>Less than one hour of a freelancer&apos;s time. Every month.</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           {[
-            { plan:'Free', price:'£0', features:['3 AI posts/week','1 business','All 3 platforms','Approve/reject flow'], cta:'Start free', href:'/signup', highlight:false },
-            { plan:'Pro', price:'£14/mo', features:['Unlimited AI posts','Weekly drops','Hashtag intelligence','Analytics dashboard','Content calendar'], cta:'Get Pro', href:'/signup', highlight:true },
+            { plan:'Free Trial', price:'£0', features:['7 days free','30 posts/month','LinkedIn, Twitter, Instagram','Cancel anytime'], cta:'Start free trial', href:'/signup', highlight:false },
+            { plan:'Pro', price:'£14/mo', features:['30 posts every month','7 fresh posts weekly','All 3 platforms','Hashtag optimization','1-tap approval'], cta:'Get Pro', href:'/signup', highlight:true },
           ].map(p => (
             <div key={p.plan} style={{ background: p.highlight ? 'linear-gradient(160deg,rgba(124,58,237,0.12),rgba(37,99,235,0.08))' : 'rgba(255,255,255,0.02)', border: `1.5px solid ${p.highlight ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '20px', padding: '28px', textAlign: 'left' }}>
               <p style={{ fontSize: '12px', color: p.highlight ? '#a78bfa' : 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: '1px', marginBottom: '8px' }}>{p.plan.toUpperCase()}</p>
@@ -237,7 +257,7 @@ export default function Home() {
       <section style={{ maxWidth: '680px', margin: '0 auto 90px', padding: '0 40px', textAlign: 'center' }}>
         <div style={{ background: 'linear-gradient(135deg,rgba(124,58,237,0.1),rgba(37,99,235,0.1))', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '24px', padding: '64px 48px' }}>
           <h2 style={{ fontSize: '40px', fontWeight: 800, letterSpacing: '-1.5px', marginBottom: '14px' }}>Start posting like a pro today</h2>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '16px', marginBottom: '36px', lineHeight: 1.6 }}>3 free AI posts every week. No credit card needed. Cancel anytime.</p>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '16px', marginBottom: '36px', lineHeight: 1.6 }}>7-day free trial. 30 posts per month. No credit card needed. Cancel anytime.</p>
           <Link href="/signup" style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)', color: '#fff', padding: '16px 40px', borderRadius: '12px', textDecoration: 'none', fontSize: '17px', fontWeight: 800, display: 'inline-block', boxShadow: '0 0 60px rgba(124,58,237,0.3)' }}>
             Get started free →
           </Link>
